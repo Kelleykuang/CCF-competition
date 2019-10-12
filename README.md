@@ -2,5 +2,6 @@
 **ustc-cs-team**
 
 Just run:
-> $ python main.py 
+>$ python main.py
+
 Then upload the 'submission.csv' to the website.
