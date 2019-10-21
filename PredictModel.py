@@ -216,7 +216,7 @@ if __name__ == "__main__":
 
 
 #%%
-    model.get_submission(pred)
+    model.submit_ans(pred)
 
 
 #%%
