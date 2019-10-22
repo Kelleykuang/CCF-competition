@@ -31,7 +31,7 @@ class PredictModel(object):
         self.data['label'] = self.data['Quality_label'].map(dit)
 
         self.feature_name = ['Parameter{0}'.format(i) for i in range(5,11)]
-        self.attr_name = ['Attribute{0}'.format(i) for i in range(1, 11)]
+        self.attr_name = ['Attribute{0}'.format(i) for i in range(4, 11)]
         self.data[self.feature_name] = np.log1p(self.data[self.feature_name])
 
         self.data[self.attr_name] = np.log1p(self.data[self.attr_name])
@@ -53,14 +53,13 @@ class PredictModel(object):
                 test_y = train_data.loc[test_index][attr]
 
                 # TODO: 参数需要调整
-                lgb_attr_model = lgb.LGBMRegressor(boosting_type="gbdt", metric='rmse', reg_alpha=10, reg_lambda=5, max_depth=7, n_estimators=500, subsample=0.7, colsample_bytree=0.4, subsample_freq=2, min_child_samples=10,num_leaves=30, learning_rate=0.05)
+                lgb_attr_model = lgb.LGBMRegressor(boosting_type="gbdt", metric='rmse', reg_alpha=10, reg_lambda=5, max_depth=7, n_estimators=500, subsample=0.7, colsample_bytree=0.4, subsample_freq=2, min_child_samples=10,num_leaves=25, learning_rate=0.05)
 
-                lgb_attr_model.fit(train_x, train_y, eval_set=[(test_x, test_y)], eval_metric='mae',
-                                   categorical_feature=feature_name, verbose=100)
+                lgb_attr_model.fit(train_x, train_y, eval_set=[(test_x, test_y)], eval_metric='rmse', verbose=100)
 
                 train_data.loc[test_index,
                                predict_label] = lgb_attr_model.predict(test_x)
-                test_data[predict_label] = test_data[predict_label] + lgb_attr_model.predict(test_data[feature_name])
+                test_data[predict_label] = test_data[predict_label] + lgb_attr_model.predict(test_data[feature_name])/5
 
         test_data[predict_label] = test_data[predict_label] / num_model_seed
 
@@ -97,8 +96,8 @@ class PredictModel(object):
             eval_metric='mae',
             nthread=-1,
         )
-        model.fit(X=train_data[self.attr_name], y=train_data['label'].astype(int))
-        pred = model.predict_proba(submit_data[self.attr_name])
+        model.fit(X=train_data[predict_label_list], y=train_data['label'].astype(int))
+        pred = model.predict_proba(submit_data[predict_label_list])
         # self.get_mae(pred, train_data['label'])
         print(pred)
 
