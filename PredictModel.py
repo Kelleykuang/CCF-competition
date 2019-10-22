@@ -30,8 +30,8 @@ class PredictModel(object):
         dit = {'Excellent': 0, 'Good': 1, 'Pass': 2, 'Fail': 3}
         self.data['label'] = self.data['Quality_label'].map(dit)
 
-        self.feature_name = ['Parameter{0}'.format(i) for i in range(5,11)]
-        self.attr_name = ['Attribute{0}'.format(i) for i in range(4, 11)]
+        self.feature_name = ['Parameter{0}'.format(i) for i in range(6,11)]
+        self.attr_name = ['Attribute{0}'.format(i) for i in range(1, 11)]
         self.data[self.feature_name] = np.log1p(self.data[self.feature_name])
 
         self.data[self.attr_name] = np.log1p(self.data[self.attr_name])
@@ -40,7 +40,7 @@ class PredictModel(object):
     def regression(self, train_data, test_data, predict_label, feature_name, attr):
         test_data[predict_label] = 0
         seeds = [19970412, 2019 * 2 + 1024, 4096, 2048, 1024]
-        num_model_seed = 1
+        num_model_seed = 5
         for model_seed in range(0, num_model_seed):
             print(model_seed+1)
             skf = KFold(n_splits=5, random_state=seeds[model_seed], shuffle=True)
@@ -53,9 +53,10 @@ class PredictModel(object):
                 test_y = train_data.loc[test_index][attr]
 
                 # TODO: 参数需要调整
-                lgb_attr_model = lgb.LGBMRegressor(boosting_type="gbdt", metric='rmse', reg_alpha=10, reg_lambda=5, max_depth=7, n_estimators=500, subsample=0.7, colsample_bytree=0.4, subsample_freq=2, min_child_samples=10,num_leaves=25, learning_rate=0.05)
+                lgb_attr_model = lgb.LGBMRegressor(boosting_type="gbdt", metric='rmse', num_leaves=30, max_depth=7,n_estimators=1000, learning_rate=0.05)
 
-                lgb_attr_model.fit(train_x, train_y, eval_set=[(test_x, test_y)], eval_metric='rmse', verbose=100)
+                lgb_attr_model.fit(train_x, train_y, eval_set=[(test_x, test_y)], eval_metric='rmse',
+                                   categorical_feature=feature_name, verbose=100)
 
                 train_data.loc[test_index,
                                predict_label] = lgb_attr_model.predict(test_x)
@@ -77,78 +78,81 @@ class PredictModel(object):
             predict_label_list.append(predict_label)
             self.data = self.regression(train_data, test_data, predict_label, self.feature_name, attr)
             print("End training:" + attr + "---------------------------\n")
-        return predict_label_list
+        newdata = self.data
+        return newdata, predict_label_list
     
     def classifier(self, predict_label_list):
         # newdata, predict_label_list = self.get_predict_label()
+        # self.data[self.attr_name] = self.data[predict_label_list]
+
         tr_index = ~self.data['label'].isnull()
         test_index = self.data['label'].isnull()
         train_data = self.data[tr_index].reset_index(drop = True)
         submit_data = self.data[~tr_index].reset_index(drop = True)
         submit_data[self.attr_name] = submit_data[predict_label_list]
 
-        model = xgb.XGBClassifier(
-            learning_rate=0.03,  # 待调整参数
-            n_estimators=2000,  # 待调整参数
-            max_depth=5,  # 待调整参数
-            min_child_weight=5,  # 待调整参数
-            objective='multi:softprob',
-            eval_metric='mae',
-            nthread=-1,
-        )
-        model.fit(X=train_data[predict_label_list], y=train_data['label'].astype(int))
-        pred = model.predict_proba(submit_data[predict_label_list])
-        # self.get_mae(pred, train_data['label'])
-        print(pred)
+        # model = xgb.XGBClassifier(
+        #     learning_rate=0.03,  # 待调整参数
+        #     n_estimators=2000,  # 待调整参数
+        #     max_depth=5,  # 待调整参数
+        #     min_child_weight=5,  # 待调整参数
+        #     objective='multi:softprob',
+        #     eval_metric='mae',
+        #     nthread=-1,
+        # )
+        # model.fit(X=train_data[predict_label_list], y=train_data['label'])
+        # pred = model.predict_proba(submit_data[predict_label_list])
+        # # self.get_mae(pred, train_data['label'])
+        # print(pred)
 
         
-        # X_train = train_data[self.attr_name].reset_index(drop=True)
-        # y = train_data['label'].reset_index(drop=True).astype(int)
-        # X_submit = submit_data[self.attr_name].reset_index(drop=True)
+        X_train = train_data[self.attr_name].reset_index(drop=True)
+        y = train_data['label'].reset_index(drop=True).astype(int)
+        X_submit = submit_data[predict_label_list].reset_index(drop=True)
 
-        # oof = np.zeros((X_train.shape[0],4))
+        oof = np.zeros((X_train.shape[0],4))
+        pred = np.zeros((X_submit.shape[0],4))
 
-        # seeds = [19970412, 2019 * 2 + 1024, 4096, 2048, 1024]
-        # num_model_seed = 2
-        # for model_seed in range(0, num_model_seed):
-        #     print(model_seed+1)
+        seeds = [19970412, 2019 * 2 + 1024, 4096, 2048, 1024]
+        num_model_seed = 5
+        for model_seed in range(0, num_model_seed):
+            print(model_seed+1)
 
-        #     oof_cat = np.zeros((X_train.shape[0], 4))
-        #     pred = np.zeros((X_submit.shape[0], 4))
+            oof_cat = np.zeros((X_train.shape[0], 4))
+            pred_cat = np.zeros((X_submit.shape[0], 4))
 
-        #     skf = KFold(n_splits=5, random_state=seeds[model_seed], shuffle=True)
-        #     for train_index, test_index in skf.split(train_data):
+            skf = KFold(n_splits=5, random_state=seeds[model_seed], shuffle=True)
+            for train_index, test_index in skf.split(train_data):
 
-        #         train_x = train_data.loc[train_index][self.attr_name]
-        #         test_x = train_data.loc[test_index][self.attr_name]
+                train_x = train_data.loc[train_index][predict_label_list]
+                test_x = train_data.loc[test_index][predict_label_list]
 
-        #         train_y = train_data.loc[train_index]['label'].astype(int)
-        #         test_y = train_data.loc[test_index]['label'].astype(int)
+                train_y = train_data.loc[train_index]['label']
+                test_y = train_data.loc[test_index]['label']
                 
-        #         print("Begin training...")
-        #         model = xgb.XGBClassifier(
-        #         learning_rate=0.03,  # 待调整参数
-        #         n_estimators=200,  # 待调整参数
-        #         max_depth=5,  # 待调整参数
-        #         min_child_weight=5,  # 待调整参数
-        #         objective='multi:softprob',
-        #         verbose = 100,
-        #         eval_metric='mae',
-        #         nthread=-1,
-        #         )
+                print("Begin training...")
+                model = xgb.XGBClassifier(
+                learning_rate=0.03,  # 待调整参数
+                n_estimators=2000,  # 待调整参数
+                max_depth=5,  # 待调整参数
+                min_child_weight=5,  # 待调整参数
+                objective='multi:softprob',
+                verbose = 100,
+                eval_metric='mae',
+                nthread=-1,
+                )
 
-        #         model.fit(train_x, train_y)
-        #         oof_cat[test_index] += model.predict_proba(test_x)
-        #         pred += model.predict_proba(X_submit)/5
-        #         print("End training...")
+                model.fit(train_x, train_y)
+                oof_cat[test_index] += model.predict_proba(test_x)
+                pred_cat += model.predict_proba(X_submit)/5
+                print("End training...")
                 
-        #     oof += oof_cat / num_model_seed
-        #     pred += pred / num_model_seed
-        #     print('logloss', log_loss(pd.get_dummies(y).values, oof_cat))
-        #     print('ac', accuracy_score(y, np.argmax(oof_cat, axis=1)))
-        #     self.get_mae(pred, y)
-            # print('mae', 1/(1 + np.sum(np.absolute(np.eye(4)[y] - oof_cat))/480))
-        print(pred)
+            oof += oof_cat / num_model_seed
+            pred += pred_cat / num_model_seed
+            print('logloss', log_loss(pd.get_dummies(y).values, oof_cat))
+            print('ac', accuracy_score(y, np.argmax(oof_cat, axis=1)))
+            self.get_mae(oof_cat, y)
+            print('mae', 1/(1 + np.sum(np.absolute(np.eye(4)[y] - oof_cat))/480))
         return pred
 
     def get_mae(self, predicted: np.ndarray, standard: pd.Series):
