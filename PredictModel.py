@@ -1,3 +1,5 @@
+# To add a new cell, type '#%%'
+# To add a new markdown cell, type '#%% [markdown]'
 #%%
 import numpy as np
 import pandas as pd
@@ -40,7 +42,7 @@ class PredictModel(object):
     def regression(self, train_data, test_data, predict_label, feature_name, attr):
         test_data[predict_label] = 0
         seeds = [19970412, 2019 * 2 + 1024, 4096, 2048, 1024]
-        num_model_seed = 5
+        num_model_seed = 2
         for model_seed in range(0, num_model_seed):
             print(model_seed+1)
             skf = KFold(n_splits=5, random_state=seeds[model_seed], shuffle=True)
@@ -53,7 +55,7 @@ class PredictModel(object):
                 test_y = train_data.loc[test_index][attr]
 
                 # TODO: 参数需要调整
-                lgb_attr_model = lgb.LGBMRegressor(boosting_type="gbdt", metric='rmse', num_leaves=30, max_depth=7,n_estimators=1000, learning_rate=0.05)
+                lgb_attr_model = lgb.LGBMRegressor(boosting_type="gbdt", metric='rmse', num_leaves=30, max_depth=7,n_estimators=500, learning_rate=0.05)
 
                 lgb_attr_model.fit(train_x, train_y, eval_set=[(test_x, test_y)], eval_metric='rmse',
                                    categorical_feature=feature_name, verbose=100)
@@ -132,14 +134,20 @@ class PredictModel(object):
                 
                 print("Begin training...")
                 model = xgb.XGBClassifier(
-                learning_rate=0.03,  # 待调整参数
-                n_estimators=2000,  # 待调整参数
-                max_depth=5,  # 待调整参数
-                min_child_weight=5,  # 待调整参数
-                objective='multi:softprob',
-                verbose = 100,
-                eval_metric='mae',
-                nthread=-1,
+                    learning_rate=0.14,
+                    n_estimators=200,  # done
+
+                    max_depth=9,  # done 可能存在过拟合，需要再次调整
+                    min_child_weight=1,  # done
+                    gamma=0.46,  # done
+                    subsample=0.94,  # done
+                    colsample_bytree=1,  # done
+
+                    objective='multi:softmax',
+                    num_class=4,
+                    eval_metric='merror',
+                    nthread=-1,
+                    verbosity=1,
                 )
 
                 model.fit(train_x, train_y)
@@ -203,7 +211,6 @@ class PredictModel(object):
 
 #%%
 if __name__ == "__main__":
-    
     warnings.filterwarnings('ignore')
     pd.options.display.max_columns = None
     pd.options.display.max_rows = None
@@ -213,11 +220,12 @@ if __name__ == "__main__":
 
 
 #%%
-    predict_label_list = model.get_predict_label()
+    newdata, predict_label_list = model.get_predict_label()
 
 
 #%%
     pred = model.classifier(predict_label_list)
+    print(pred)
 
 
 #%%
