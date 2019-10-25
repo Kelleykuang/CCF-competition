@@ -1,1 +1,4 @@
 .idea
+./catboost_info
+.vscode
+submission.csv
