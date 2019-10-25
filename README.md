@@ -1,7 +1,4 @@
-# CCF-competition
-**ustc-cs-team**
+# This is Zhehao Li's branch 
 
-Just run:
->$ python main.py
+goto ./dataAnalyze.ipynb for data visualization
 
-Then upload the 'submission.csv' to the website.
