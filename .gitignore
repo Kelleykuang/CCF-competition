@@ -1,0 +1,5 @@
+*.npy
+regreModelAttr0
+regreModelAttr1
+.csv
+.tmp
