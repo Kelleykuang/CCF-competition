@@ -16,9 +16,9 @@ para_sub = (para_sub - para_sub.mean()) / para_sub.std()
 sub.loc[:, [f'Parameter{i}' for i in range(1, 11)]] = para_sub
 
 para_selection = {
-    1: [1, 2, 3, 4],
-    2: [1, 2, 3, 4],
-    3: [1, 2, 3, 4],
+    1: [6, 7, 8, 9, 10],
+    2: [6, 7, 8, 9, 10],
+    3: [6, 7, 8, 9, 10],
     4: [6, 7, 8, 9, 10],
     5: [6, 7, 8, 9, 10],
     6: [6, 7, 8, 9, 10],
@@ -28,38 +28,47 @@ para_selection = {
     10: [6, 7, 8, 9, 10],
 }
 
+# ============ tuning for Attribute1 =========
+# Fitting 5 folds for each of 14641 candidates, totalling 73205 fits
+# -0.7966804100641662 {'colsample_bylevel': 0.8, 'colsample_bynode': 0.0, 'colsample_bytree': 0.5, 'subsample': 0.2}
+# ============ tuning for Attribute2 =========
+# Fitting 5 folds for each of 14641 candidates, totalling 73205 fits
+# -0.7936638670497012 {'colsample_bylevel': 0.0, 'colsample_bynode': 0.0, 'colsample_bytree': 0.6, 'subsample': 1.0}
+# ============ tuning for Attribute3 =========
+# Fitting 5 folds for each of 14641 candidates, totalling 73205 fits
+# -0.7939647518064532 {'colsample_bylevel': 0.9, 'colsample_bynode': 0.0, 'colsample_bytree': 0.8, 'subsample': 0.2}
 xgb_params_set = {
     1: {
-        'learning_rate': 0.022,
-        'n_estimators': 200,
+        'learning_rate': 0.04,
+        'n_estimators': 100,
         'max_depth': 2,
-        'min_child_weight': 12,
-        'gamma': 0.6,
-        'subsample': 0.1,
-        'colsample_bytree': 1.0,
-        'colsample_bylevel': 0.6,
-        'colsample_bynode': 0.4,
+        'min_child_weight': 20,
+        'gamma': 0.93,
+        'subsample': 0.2,
+        'colsample_bytree': 0.5,
+        'colsample_bylevel': 0.8,
+        'colsample_bynode': 0.0,
     },
     2: {
-        'learning_rate': 0.018,
-        'n_estimators': 200,
+        'learning_rate': 0.01,
+        'n_estimators': 350,
         'max_depth': 1,
-        'min_child_weight': 6,
-        'gamma': 0.7,
-        'subsample': 0.1,
-        'colsample_bytree': 0.7,
-        'colsample_bylevel': 0.3,
+        'min_child_weight': 23,
+        'gamma': 1.0,
+        'subsample': 1.0,
+        'colsample_bytree': 0.6,
+        'colsample_bylevel': 0.0,
         'colsample_bynode': 0.0,
     },
     3: {
-        'learning_rate': 0.031,
+        'learning_rate': 0.02,
         'n_estimators': 200,
-        'max_depth': 1,
-        'min_child_weight': 16,
-        'gamma': 0.6,
-        'subsample': 0.1,
-        'colsample_bytree': 0.6,
-        'colsample_bylevel': 0.5,
+        'max_depth': 2,
+        'min_child_weight': 27,
+        'gamma': 0.38,
+        'subsample': 0.2,
+        'colsample_bytree': 0.8,
+        'colsample_bylevel': 0.9,
         'colsample_bynode': 0.0
     },
     4: {
