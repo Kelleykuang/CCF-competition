@@ -33,7 +33,7 @@ print(X_train.shape,X_test.shape)
 oof = np.zeros((X_train.shape[0],4))
 prediction = np.zeros((X_test.shape[0],4))
 
-cbt_model = cbt.CatBoostClassifier(iterations=2000,learning_rate=0.04,verbose=100,
+cbt_model = cbt.CatBoostClassifier(iterations=2000,learning_rate=0.043,verbose=100,
 early_stopping_rounds=1000,task_type='CPU',
 loss_function='MultiClass')
 cbt_model.fit(X_train, y ,eval_set=(X_train,y))
