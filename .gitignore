@@ -1,10 +1,6 @@
-<<<<<<< HEAD
 *.npy
 regreModelAttr0
 regreModelAttr1
 .csv
 .tmp
 *.py
-=======
-.idea
->>>>>>> 121a60a08b21280d8017dae4ea6f2d8650f82173
