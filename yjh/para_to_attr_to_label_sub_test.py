@@ -10,7 +10,7 @@ train: pd.DataFrame = pd.read_csv('../data/first_round_training_data.csv')
 sub: pd.options = pd.read_csv('../data/first_round_testing_data.csv')
 
 # 预处理
-train = util.preprocess(train,'log')
+train = util.preprocess(train, 'log')
 
 para_sub: pd.DataFrame = sub.loc[:, [f'Parameter{i}' for i in range(1, 11)]]
 para_sub = np.log(para_sub)
@@ -29,41 +29,7 @@ para_selection = {
     9: [6, 7, 8, 9, 10],
     10: [6, 7, 8, 9, 10],
 }
-# xgb_params_set_456 = {
-#     'learning_rate': 0.12,
-#     'n_estimators': 500,
-#     'max_depth': 2,
-#     'min_child_weight': 8,  # todo 待调整
-#     'gamma': 1,  # todo 考虑大于 1 的值
-#     'subsample': 0.9,
-#     'colsample_bytree': 0.8,
-#     'colsample_bylevel': 0.8,
-#     'colsample_bynode': 0.7,
-# }
 
-# xgb_params_set_78910 = {
-#     'learning_rate': 0.03,
-#     'n_estimators': 1000,
-#     'max_depth': 2,
-#     'min_child_weight': 10,  # todo 待调整
-#     'gamma': 0.5,  # todo 待调整 考虑大于 1 的值
-#     'subsample': 0.7,  # todo  待调整
-#     'colsample_bytree': 0.9,
-#     'colsample_bylevel': 0.8,
-#     'colsample_bynode': 1.0,
-# }
-# xgb_params_set = {
-#     1: {},
-#     2: {},
-#     3: {},
-#     4: xgb_params_set_456,
-#     5: xgb_params_set_456,
-#     6: xgb_params_set_456,
-#     7: xgb_params_set_78910,
-#     8: xgb_params_set_78910,
-#     9: xgb_params_set_78910,
-#     10: xgb_params_set_78910,
-# }
 xgb_params_set = {
     1: {
         'learning_rate': 0.022,
@@ -183,17 +149,20 @@ para_train, attr_train, qual_train, para_test, attr_test, qual_test \
                             attr_range=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 attr_pred = pd.DataFrame(
-    data={f'Attribute{i}': np.empty(shape=(6000,)) for i in [4, 5, 6, 7, 8, 9, 10]}
+    data={f'Attribute{i}': np.empty(shape=(6000,))
+          for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
 )
 
 attr_train_pred = pd.DataFrame(
-    data={f'Attribute{i}': np.empty(shape=(6000,)) for i in [4, 5, 6, 7, 8, 9, 10]}
+    data={f'Attribute{i}': np.empty(shape=(6000,))
+          for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
 )
 
 for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
     param_set = xgb_params_set[i]
     model = xgb.XGBRegressor(
-        learning_rate=param_set.get('learning_rate', 0.02),  # todo 和 n_estimators 成反比
+        # todo 和 n_estimators 成反比
+        learning_rate=param_set.get('learning_rate', 0.02),
         n_estimators=param_set.get('n_estimators', 200),  # todo
 
         max_depth=param_set.get('max_depth', 2),  # todo 太高容易过拟合
@@ -211,46 +180,14 @@ for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
         nthread=-1,
         verbosity=1,
     )
-    model.fit(X=para_train.loc[:, [f'Parameter{j}' for j in para_selection[i]]], y=attr_train.loc[:, f'Attribute{i}'])
+    model.fit(X=para_train.loc[:, [
+              f'Parameter{j}' for j in para_selection[i]]], y=attr_train.loc[:, f'Attribute{i}'])
 
-    attr_train_pred.loc[:, f'Attribute{i}'] = model.predict(data=para_train.loc[:, [f'Parameter{j}' for j in para_selection[i]]])
+    attr_train_pred.loc[:, f'Attribute{i}'] = model.predict(
+        data=para_train.loc[:, [f'Parameter{j}' for j in para_selection[i]]])
 
-    attr_pred.loc[:, f'Attribute{i}'] = model.predict(data=sub.loc[:, [f'Parameter{j}' for j in para_selection[i]]])
-
-# model = xgb.XGBClassifier(
-#     learning_rate=0.19,  # 0.14 tuned
-#     n_estimators=200,  # 200 tuned
-
-#     max_depth=4,  # done 可能存在过拟合，需要再次调整
-#     min_child_weight=2,  # done
-#     gamma=0.68,  # done
-#     subsample=0.7,  # done
-    
-#     colsample_bytree=1.0,  # done
-#     colsample_bylevel=0.4,  # done
-#     colsample_bynode=0.8,  # done
-    
-#     objective='multi:softprob',
-#     num_class=4,
-#     eval_metric='auc',
-#     nthread=-1,
-#     verbosity=1,
-# )
-
-# frames = [para_train.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_train_pred]
-# xtr = pd.concat(frames,axis=1)
-#model.fit(X=xtr, y=qual_train)
-# frames = [para_sub.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_pred]
-# xte = pd.concat(frames,axis=1)
-# model.fit(X=attr_train_pred, y=qual_train)
-# qual_pred_2 = model.predict_proba(data=attr_pred)
-
-
-cbt_model_1 = cbt.CatBoostClassifier(iterations=300,learning_rate=0.04,verbose=100,
-early_stopping_rounds=1000,task_type='CPU',
-loss_function='MultiClass')
-cbt_model.fit(xtr,qual_train ,eval_set=(xtr,qual_train))
-qual_pred = cbt_model.predict_proba(xte)
+    attr_pred.loc[:, f'Attribute{i}'] = model.predict(
+        data=sub.loc[:, [f'Parameter{j}' for j in para_selection[i]]])
 
 model = xgb.XGBClassifier(
     learning_rate=0.06,  # 0.14 tuned #1
@@ -268,11 +205,42 @@ model = xgb.XGBClassifier(
     eval_metric='merror',
     nthread=-1,
 )
-model.fit(X=xtr, y=qual_train)
-qual_pred_2 = model.predict_proba(data=xte)
+# model = xgb.XGBClassifier(
+#     learning_rate=0.19,  # 0.14 tuned
+#     n_estimators=200,  # 200 tuned
+
+#     max_depth=4,  # done 可能存在过拟合，需要再次调整
+#     min_child_weight=2,  # done
+#     gamma=0.68,  # done
+#     subsample=0.7,  # done
+
+#     colsample_bytree=1.0,  # done
+#     colsample_bylevel=0.4,  # done
+#     colsample_bynode=0.8,  # done
+
+#     objective='multi:softprob',
+#     num_class=4,
+#     eval_metric='auc',
+#     nthread=-1,
+#     verbosity=1,
+# )
+
+frames = [
+    para_train.loc[:, [f'Parameter{j}' for j in range(6, 11)]], attr_train_pred]
+xtr = pd.concat(frames, axis=1)
+#model.fit(X=xtr, y=qual_train)
+frames = [para_sub.loc[:, [f'Parameter{j}' for j in range(6, 11)]], attr_pred]
+xte = pd.concat(frames, axis=1)
+# model.fit(X=attr_train_pred, y=qual_train)
+# qual_pred_2 = model.predict_proba(data=attr_pred)
 
 
-util.get_submission((qual_pred+qual_pred_2)/2.0)
+cbt_model = cbt.CatBoostClassifier(iterations=500, learning_rate=0.04, verbose=100,
+                                   early_stopping_rounds=1000, task_type='CPU',
+                                   loss_function='MultiClass')
+cbt_model.fit(xtr, qual_train, eval_set=(xtr, qual_train))
+qual_pred = cbt_model.predict_proba(xte)
+util.get_submission(qual_pred)
 
 if __name__ == '__main__':
     pass
