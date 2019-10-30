@@ -3,7 +3,7 @@ import pandas as pd
 import xgboost as xgb
 import util
 from sklearn import metrics
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import KFold, StratifiedKFold
 import catboost as cbt
 # 导入数据
 train: pd.DataFrame = pd.read_csv('../data/first_round_training_data.csv')
@@ -29,41 +29,7 @@ para_selection = {
     9: [6, 7, 8, 9, 10],
     10: [6, 7, 8, 9, 10],
 }
-# xgb_params_set_456 = {
-#     'learning_rate': 0.12,
-#     'n_estimators': 500,
-#     'max_depth': 2,
-#     'min_child_weight': 8,  # todo 待调整
-#     'gamma': 1,  # todo 考虑大于 1 的值
-#     'subsample': 0.9,
-#     'colsample_bytree': 0.8,
-#     'colsample_bylevel': 0.8,
-#     'colsample_bynode': 0.7,
-# }
 
-# xgb_params_set_78910 = {
-#     'learning_rate': 0.03,
-#     'n_estimators': 1000,
-#     'max_depth': 2,
-#     'min_child_weight': 10,  # todo 待调整
-#     'gamma': 0.5,  # todo 待调整 考虑大于 1 的值
-#     'subsample': 0.7,  # todo  待调整
-#     'colsample_bytree': 0.9,
-#     'colsample_bylevel': 0.8,
-#     'colsample_bynode': 1.0,
-# }
-# xgb_params_set = {
-#     1: {},
-#     2: {},
-#     3: {},
-#     4: xgb_params_set_456,
-#     5: xgb_params_set_456,
-#     6: xgb_params_set_456,
-#     7: xgb_params_set_78910,
-#     8: xgb_params_set_78910,
-#     9: xgb_params_set_78910,
-#     10: xgb_params_set_78910,
-# }
 xgb_params_set = {
     1: {
         'learning_rate': 0.022,
@@ -218,7 +184,7 @@ for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
     attr_pred.loc[:, f'Attribute{i}'] = model.predict(data=sub.loc[:, [f'Parameter{j}' for j in para_selection[i]]])
 
 model = xgb.XGBClassifier(
-    learning_rate=0.06,  # 0.14 tuned #1
+    learning_rate=0.08,  # 0.14 tuned #1
     n_estimators=200,  # 200 tuned
 
     max_depth=4,  # done 可能存在过拟合，需要再次调整
@@ -233,55 +199,57 @@ model = xgb.XGBClassifier(
     eval_metric='merror',
     nthread=-1,
 )
-# model = xgb.XGBClassifier(
-#     learning_rate=0.19,  # 0.14 tuned
-#     n_estimators=200,  # 200 tuned
 
-#     max_depth=4,  # done 可能存在过拟合，需要再次调整
-#     min_child_weight=2,  # done
-#     gamma=0.68,  # done
-#     subsample=0.7,  # done
-    
-#     colsample_bytree=1.0,  # done
-#     colsample_bylevel=0.4,  # done
-#     colsample_bynode=0.8,  # done
-    
-#     objective='multi:softprob',
-#     num_class=4,
-#     eval_metric='auc',
-#     nthread=-1,
-#     verbosity=1,
-# )
 
-# frames = [para_train.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_train_pred]
-# xtr = pd.concat(frames,axis=1)
+
+#frames = [para_train.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_train_pred]
+frames = [para_train.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]]]
+xtr = pd.concat(frames,axis=1)
 #model.fit(X=xtr, y=qual_train)
-# frames = [para_sub.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_pred]
-# xte = pd.concat(frames,axis=1)
+frames = [para_sub.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]]]
+#frames = [para_sub.loc[:,[f'Parameter{j}' for j in range(6,11)]], attr_pred]
+xte = pd.concat(frames,axis=1)
 # model.fit(X=attr_train_pred, y=qual_train)
 # qual_pred_2 = model.predict_proba(data=attr_pred)
 
 
-cbt_model_1 = cbt.CatBoostClassifier(iterations=300,learning_rate=0.04,verbose=100,
-early_stopping_rounds=1000,task_type='CPU',
-loss_function='MultiClass')
-cbt_model_1.fit(attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]],qual_train ,eval_set=(attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]],qual_train))
-qual_pred_1 = cbt_model_1.predict_proba(attr_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]])
+cbt_model = cbt.CatBoostClassifier(iterations=500,learning_rate=0.04,verbose=100,
+early_stopping_rounds=200,task_type='CPU',loss_function='MultiClass',use_best_model=True)
+K = 6
+skf = KFold(n_splits=K)
+qual_pred = 0
+for train_index, test_index in skf.split(xtr):
+    train_x = xtr.loc[train_index]
+    test_x = xtr.loc[test_index]
 
-cbt_model_2 = cbt.CatBoostClassifier(iterations=500,learning_rate=0.04,verbose=100,
-early_stopping_rounds=1000,task_type='CPU',
-loss_function='MultiClass')
-cbt_model_2.fit(attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]],qual_train ,eval_set=(attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]],qual_train))
-qual_pred_2 = cbt_model_2.predict_proba(attr_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]])
+    train_y = qual_train.loc[train_index]
+    test_y = qual_train.loc[test_index]
+    
+    cbt_model.fit(train_x,train_y,eval_set=(test_x,test_y))
+    qual_pred += cbt_model.predict_proba(xte)
+qual_pred /= K
 
-cbt_model_3 = cbt.CatBoostClassifier(iterations=700,learning_rate=0.04,verbose=100,
-early_stopping_rounds=1000,task_type='CPU',
-loss_function='MultiClass')
-cbt_model_3.fit(attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]],qual_train ,eval_set=(attr_train_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]],qual_train))
-qual_pred_3 = cbt_model_3.predict_proba(attr_pred.loc[:,[f'Attribute{j}' for j in range(4,11)]])
 
-qual_pred = (qual_pred_1+qual_pred_2+qual_pred_3)/3
+# cbt_model_1 = cbt.CatBoostClassifier(iterations=300,learning_rate=0.04,verbose=100,
+# early_stopping_rounds=1000,task_type='CPU',
+# loss_function='MultiClass')
+# cbt_model_1.fit(xtr,qual_train ,eval_set=(xtr,qual_train))
+# qual_pred_1 = cbt_model_1.predict_proba(xte)
+
+# cbt_model_2 = cbt.CatBoostClassifier(iterations=500,learning_rate=0.04,verbose=100,
+# early_stopping_rounds=1000,task_type='CPU',
+# loss_function='MultiClass')
+# cbt_model_2.fit(xtr,qual_train ,eval_set=(xtr,qual_train))
+# qual_pred_2 = cbt_model_2.predict_proba(xte)
+
+# cbt_model_3 = cbt.CatBoostClassifier(iterations=700,learning_rate=0.04,verbose=100,
+# early_stopping_rounds=1000,task_type='CPU',
+# loss_function='MultiClass')
+# cbt_model_3.fit(xtr,qual_train ,eval_set=(xtr,qual_train))
+# qual_pred_3 = cbt_model_3.predict_proba(xte)
+
+#qual_pred = (qual_pred_1+qual_pred_2+qual_pred_3)/3
 util.get_submission(qual_pred)
-
 if __name__ == '__main__':
     pass
+
