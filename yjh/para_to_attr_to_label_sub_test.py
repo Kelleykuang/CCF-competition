@@ -149,11 +149,11 @@ para_train, attr_train, qual_train, para_test, attr_test, qual_test \
                             attr_range=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
 attr_pred = pd.DataFrame(
-    data={f'Attribute{i}': np.empty(shape=(6000,)) for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+    data={f'Attribute{i}': np.empty(shape=(6000,)) for i in [4, 5, 6, 7, 8, 9, 10]}
 )
 
 attr_train_pred = pd.DataFrame(
-    data={f'Attribute{i}': np.empty(shape=(6000,)) for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+    data={f'Attribute{i}': np.empty(shape=(6000,)) for i in [4, 5, 6, 7, 8, 9, 10]}
 )
 
 for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
@@ -183,22 +183,6 @@ for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]:
 
     attr_pred.loc[:, f'Attribute{i}'] = model.predict(data=sub.loc[:, [f'Parameter{j}' for j in para_selection[i]]])
 
-model = xgb.XGBClassifier(
-    learning_rate=0.06,  # 0.14 tuned #1
-    n_estimators=200,  # 200 tuned
-
-    max_depth=4,  # done 可能存在过拟合，需要再次调整
-    min_child_weight=4,  # done #3
-    gamma=0.46,  # done
-    subsample=0.7,  # done
-
-    colsample_bytree=0.7,  # done
-
-    objective='multi:softmax',
-    num_class=4,
-    eval_metric='merror',
-    nthread=-1,
-)
 # model = xgb.XGBClassifier(
 #     learning_rate=0.19,  # 0.14 tuned
 #     n_estimators=200,  # 200 tuned
@@ -233,7 +217,28 @@ early_stopping_rounds=1000,task_type='CPU',
 loss_function='MultiClass')
 cbt_model.fit(xtr,qual_train ,eval_set=(xtr,qual_train))
 qual_pred = cbt_model.predict_proba(xte)
-util.get_submission(qual_pred)
+
+model = xgb.XGBClassifier(
+    learning_rate=0.06,  # 0.14 tuned #1
+    n_estimators=200,  # 200 tuned
+
+    max_depth=4,  # done 可能存在过拟合，需要再次调整
+    min_child_weight=4,  # done #3
+    gamma=0.46,  # done
+    subsample=0.7,  # done
+
+    colsample_bytree=0.7,  # done
+
+    objective='multi:softmax',
+    num_class=4,
+    eval_metric='merror',
+    nthread=-1,
+)
+model.fit(X=xtr, y=qual_train)
+qual_pred_2 = model.predict_proba(data=xte)
+
+
+util.get_submission((qual_pred+qual_pred_2)/2.0)
 
 if __name__ == '__main__':
     pass
